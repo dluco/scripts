@@ -1,0 +1,40 @@
+#!/bin/env bash
+#
+# dexit: system shutdown dialog
+#
+# Author: David J. Luco <davidjluco@gmail.com>
+
+nb='#002b36'
+nf='#93a1a1'
+sb='#cb4b16'
+sf='#fdf6e3'
+prompt='Choose an option:'
+dmenu_cmd=( dmenu -b -i -nb "$nb" -nf "$nf" -sb "$sb" -sf "$sf" -p "$prompt" )
+
+cmd=$( echo -e "cancel\npoweroff\nreboot\nsuspend\nlogout" | \
+	xargs -0 printf %b |  "${dmenu_cmd[@]}" )
+
+case $cmd in
+    cancel)
+		exit 0
+		;;
+	poweroff)
+        systemctl poweroff
+        ;;
+    reboot)
+        systemctl reboot
+        ;;
+    suspend)
+        systemctl suspend
+        ;;
+    logout)
+		# find the appropriate logout command for the current wm
+		if [ -n "$(pgrep dwm)" ] # check for dwm
+		then
+			killall dwm
+		elif [ -n "$(pgrep i3)" ] # check for i3
+		then
+			i3-msg exit
+		fi
+        ;;
+esac

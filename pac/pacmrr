@@ -1,0 +1,111 @@
+#!/bin/bash
+# Download pacman ranked mirror list
+
+# Country codes: AU AT BY BE BR BG CA CL CN CO CZ DK EE FI FR DE GR HU IN IE IL
+# IT JP KZ KR LV LU MK NL NC NZ NO PL PT RO RU RS SG SK ZA ES LK SE CH TW TR 
+# UA GB US UZ VN
+
+# Process arguments
+while getopts c:sh option
+do
+		case $option in
+			c)country=$OPTARG;;
+			s)status=1;;
+			h)help=1;;
+		esac
+done
+
+if [[ ! -z $help ]]
+then
+	echo "Usage: "$(basename "$0")" [OPTIONS]"
+	echo -e "\t-c <country>\tspecify country (default=all)"
+	echo -e "\t-s\t\tturn off mirror ranking"
+	echo -e "\t-h\t\tdisplay this help and exit"
+	exit 1
+fi
+
+sep=""
+
+if [[ -z $country ]]
+then
+	# Default value of country is "all"
+	country=all
+else
+	echo "Mirror data for $country only"
+	sep="\n"
+fi
+
+if [[ -z $status ]]
+then
+	# Default value of status is on
+	status="&use_mirror_status=on"
+else
+	# Turn off status ranking
+	status=""
+	echo "Mirrors will not be ranked"
+	sep="\n"
+fi
+
+echo -e "${sep}Generating mirrorlist...\n"
+
+url="https://www.archlinux.org/mirrorlist/?country=${country}&protocol=http&ip_version=4${status}"
+
+# Download
+tmp_ml=$(mktemp --suffix=-mirrorlist)  # temporary mirrorlist
+if curl -s "$url" -o "$tmp_ml"; then
+  if ! grep "^## Arch Linux repository mirrorlist" "$tmp_ml" > /dev/null; then
+    echo "Error: Download invalid"
+    exit 1
+  fi
+else
+  echo "Error: Download failed"
+  exit 1
+fi
+
+# Edit
+sed -i 's/^#Server/Server/g'          "$tmp_ml"
+
+# View
+for ((i=0 ; i < 3 ; i++)); do
+  read -p ":: View the downloaded mirrorlist? [Y/n]: " yn
+  case $yn in
+    [Yy] )  if hash vim 2>&- ; then # use vim if available
+              editor=vim
+              editop=$(printf '%s' +"set syn=sh");
+            else
+              editor=nano; fi
+            "$editor" "$editop" "$tmp_ml"
+            break 2 ;;
+    [Nn] )  break 2 ;;
+    	*)  echo "Invalid response";;
+  esac
+done
+
+# Permission test
+prm_tst () {
+if [ "$UID" != 0 ] && [ ! hash sudo 2>&- ] ; then
+  echo "Program "sudo" required for regular user"
+  exit 1
+else
+  sudo=sudo
+fi ; }
+
+# Backup and Install
+bck_ml () {
+if [ -f /etc/pacman.d/mirrorlist ]; then
+  $sudo mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist_$(date +%Y%m%d%H%M)
+else
+  echo "Warning: no /etc/pacman.d/mirrorlist"
+fi ; }
+
+for ((i=0 ; i < 3 ; i++)); do
+  read -p ":: Install new mirrorlist and backup previous? [Y/n]: " yn
+  case $yn in
+    [Yy] )  prm_tst
+            bck_ml
+            $sudo install -Dm644 "$tmp_ml" /etc/pacman.d/mirrorlist
+            break 2 ;;
+    [Nn] )  break 2 ;;
+    	*)  echo "Invalid response";;
+  esac
+done

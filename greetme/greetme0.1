@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Check if morning or afternoon
+if [ "$(date +"%H")" -ge 12 ];
+then
+	MORNING="afternoon"
+else
+	MORNING="morning"
+fi
+
+# Say welcome message
+echo "Good $MORNING, $USER" | festival --tts
+
+# Get date string
+DATE="Today is $(date +"%A %B %_d, %Y")"
+
+# Say date
+echo $DATE | festival --tts
+
+# Check for updates for installed packages
+UPDATES=$(checkupdates | wc -w)
+
+# Check for plurals
+if [ $UPDATES -gt 1 ];
+then
+	PLURAL="s"
+else
+	PLURAL=""
+fi
+
+# Say how many updates are available
+echo "You have $UPDATES update$PLURAL available for installed packages" | festival --tts
+
+exit 0

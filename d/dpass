@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+#
+# Author: David J. Luco <davidjluco@gmail.com>
+#
+# based on: https://github.com/cdown/passmenu
+# and the script by Jason Ryan: https://jasonwryan.com/blog/2014/08/02/password/
+
+shopt -s nullglob globstar
+
+# GPG settings
+GPG_OPTS=( "--quiet" )
+GPG="gpg"
+which gpg2 &>/dev/null && GPG="gpg2"
+[[ -n $GPG_AGENT_INFO || $GPG == "gpg2" ]] && GPG_OPTS+=( "--batch" )
+
+# dmenu settings
+nb='#002b36'
+nf='#93a1a1'
+sb='#2aa198'
+sf='#fdf6e3'
+prompt='Choose an entry:'
+dmenu_cmd=( dmenu -b -i -nb "$nb" -nf "$nf" -sb "$sb" -sf "$sf" -p "$prompt" )
+
+prefix=${PASSWORD_STORE_DIR:-~/.password-store}
+lock_file=( "$prefix"/.dummy-lock.gpg )
+password_files=( "$prefix"/**/*.gpg )
+password_files=( "${password_files[@]#"$prefix"/}" )
+password_files=( "${password_files[@]%.gpg}" )
+
+# "unlock" password store
+# (Actually decrypts dummy file in order to load gpg passphrase into cache)
+unlock=$($GPG --decrypt "${GPG_OPTS[@]}" "$lock_file")
+
+# check result
+if [[ -z "$unlock" ]]; then
+	# error or operation aborted by user
+	exit 1
+fi
+
+# indicate that password store is unlocked
+echo $unlock
+
+# display entries with dmenu
+word=$(printf '%s\n' "${password_files[@]}" | "${dmenu_cmd[@]}" "$@")
+
+# check result
+if [[ -n "$word" ]]; then
+	# copy password into clipboard
+	/usr/bin/pass show -c "$word" 2>/dev/null
+fi
