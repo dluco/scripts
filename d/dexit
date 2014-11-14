@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 #
 # dexit: system shutdown dialog
 #
@@ -11,7 +11,7 @@ sf='#fdf6e3'
 prompt='Choose an option:'
 dmenu_cmd=( dmenu -b -i -nb "$nb" -nf "$nf" -sb "$sb" -sf "$sf" -p "$prompt" )
 
-cmd=$( echo -e "cancel\npoweroff\nreboot\nsuspend\nlogout" | \
+cmd=$( echo -e "cancel\nlogout\nsuspend\nreboot\npoweroff" | \
 	xargs -0 printf %b |  "${dmenu_cmd[@]}" )
 
 case $cmd in
@@ -35,6 +35,9 @@ case $cmd in
 		elif [ -n "$(pgrep i3)" ] # check for i3
 		then
 			i3-msg exit
+		elif [ -n "$(pgrep openbox-session)" ] # check for openbox
+		then
+			openbox --exit
 		fi
         ;;
 esac
