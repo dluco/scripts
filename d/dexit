@@ -11,7 +11,7 @@ sf='#fdf6e3'
 prompt='Choose an option:'
 dmenu_cmd=( dmenu -b -i -nb "$nb" -nf "$nf" -sb "$sb" -sf "$sf" -p "$prompt" )
 
-cmd=$( echo -e "cancel\nlogout\nsuspend\nreboot\npoweroff" | \
+cmd=$( echo -e "cancel\nlogout\nsuspend\nhibernate\nhybrid\nreboot\npoweroff" | \
 	xargs -0 printf %b |  "${dmenu_cmd[@]}" )
 
 case $cmd in
@@ -27,16 +27,19 @@ case $cmd in
     suspend)
         systemctl suspend
         ;;
+    hibernate)
+        systemctl hibernate
+        ;;
+    hybrid)
+        systemctl hybrid-sleep
+        ;;
     logout)
 		# find the appropriate logout command for the current wm
-		if [ -n "$(pgrep dwm)" ] # check for dwm
-		then
-			killall dwm
-		elif [ -n "$(pgrep i3)" ] # check for i3
-		then
+		if [[ -n "$(pgrep i3)" ]]; then # check for i3
 			i3-msg exit
-		elif [ -n "$(pgrep openbox-session)" ] # check for openbox
-		then
+		elif [[ -n "$(pgrep dwm)" ]]; then # check for dwm
+			killall dwm
+		elif [[ -n "$(pgrep openbox-session)" ]]; then # check for openbox
 			openbox --exit
 		fi
         ;;
