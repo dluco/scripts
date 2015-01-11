@@ -1,0 +1,64 @@
+#!/bin/bash
+
+name=$(basename "$0")
+
+# Functions
+error()
+{
+	echo "$name: $*" 2>&1
+}
+
+exit_normal()
+{
+	exit 0
+}
+
+exit_error()
+{
+	exit 1
+}
+
+die()
+{
+	error "$*"
+	exit_error
+}
+
+# check for input
+if [[ -z "$1" ]]; then
+	echo "[usage]: $name <package>"
+	exit_error
+fi
+
+package="$1"
+
+# get name of repo containing package
+repo="$(pacman -Si $package 2>/dev/null | grep Repository | awk '{print $3}')"
+
+# check result of search
+if [[ -z $repo ]]; then
+	die "$package: package not found"
+fi
+
+echo "Found $repo/$package"
+
+# download PKGBUILD script
+result="$(abs "$repo/$package")"
+err=$?
+
+echo "$result"
+
+if [[ $err != 0 ]]; then
+	# Error encountered
+	exit_error
+fi
+
+# Get ABSROOT from ~/.abs.conf or /etc/abs.conf
+# User based overrides
+[[ -f /etc/abs.conf ]] && source /etc/abs.conf
+[[ -f ~/.abs.conf ]] && source ~/.abs.conf
+
+# Create symlink to package dir for easy access
+ln -s "$ABSROOT/$repo/$package" "$ABSROOT/$package"
+
+exit_normal
