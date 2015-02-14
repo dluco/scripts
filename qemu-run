@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# qemu-run: qemu-wrapper script
+# 
+# Author: David Luco <dluco11@gmail.com>
+#
+
+name=$(basename "$0")
+
+# helpers
+usage()
+{
+	echo -e "Usage: qemu <COMMAND> [ARGS]\n"
+	echo -e "  list \t\t print list of available VM profiles"
+	echo -e "  start \t start a VM profile"
+}
+
+error()
+{
+	echo "$name: $*" >&2
+}
+
+exit_normal()
+{
+	exit 0
+}
+
+exit_error()
+{
+	exit 1
+}
+
+die()
+{
+	error "$*"
+	exit_error
+}
+
+# start a VM profile
+start()
+{
+	profile=$1
+	# check for profile name
+	if [[ -z $profile ]]; then
+		die "Profile not specified"
+	fi
+
+	# check if profile dir exits
+	if [ ! -d ~/VMs/$profile ]; then
+		die "Profile '$profile' does not exist"
+	fi
+	cd ~/VMs/$profile/
+
+	# source profile configuration
+	source config
+
+	echo "Starting profile '$profile'..."
+
+	# start VM
+	qemu-system-x86_64 $OPTIONS $DISK
+}
+
+# main entry point of program
+main ()
+{
+	# check command
+	if [ -z $1 ]; then
+		usage >&2
+		exit_error
+	fi
+
+	case $1 in
+		list)
+			# list all profiles
+			ls ~/VMs
+			;;
+		start)
+			# start VM
+			start $2
+			;;
+		help)
+			# print help text
+			usage
+			;;
+		*)
+			die "Unknown command: $1"
+			;;
+	esac
+
+	exit_normal
+}
+
+main $@
